@@ -24,12 +24,12 @@
 	    (* Initialize initialFaceProbs1 and initialFaceProbs2 here. Use RandomReal and make it so
 	       so that all entries are within a factor of two of one another. The built in functions
 	       Normalize and Total may also be useful here. *)
-	    (* Put your code here.*)
 	    	nonNormalized1=Table[RandomReal[{1/numFaces, 2/numFaces}], {i, 1, numFaces}];
 	    	initialFaceProbs1=Table[nonNormalized1[[i]]/Total[nonNormalized1], {i, 1, numFaces}];
 	       
 	   	   nonNormalized2=Table[RandomReal[{1/numFaces, 2/numFaces}], {i, 1, numFaces}];
 	       initialFaceProbs2=Table[nonNormalized2[[i]]/Total[nonNormalized2], {i, 1, numFaces}];
+	       
 	diceEMIterator[binCountsList, 
 		           numFaces, 
 		           {0.45, 0.55, initialFaceProbs1, initialFaceProbs2}, 
@@ -44,13 +44,9 @@ diceEMIterator[binCountsList_, numFaces_, initParams_, maxIterations_, accuracy_
 		(* Loop here until either maxIterations has been reached or the accuracy goal has been
 		   met. The accuracy goal is met when the sum, over all estimated parameters, of the absolute 
 		   values of the changes from one iteration to the next is less than accuracy. *)
-		(*I suggest using Do to iterate here.
-		   On each iteration, call updateProbs, passing in the old values, to set the new values. 
-		   Then test whether the termination conditions have been met (Break[] breaks a loop).
-		   Finally, if termination conditions have not been met, set old values to be the same 
+		(*Finally, if termination conditions have not been met, set old values to be the same 
 		   as the new values.
 		   *)
-	    (* Put your code here.*)
 	     Do[
             newParamEstimates = updateProbs[binCountsList,oldParamEstimates];
             If[Total[Abs[newParamEstimates-oldParamEstimates],2]<=accuracy,
@@ -59,7 +55,6 @@ diceEMIterator[binCountsList_, numFaces_, initParams_, maxIterations_, accuracy_
             ];,
             maxIterations
         ];
-	    (*Do[newParamEstimates=updateProbs[binCountsList, oldParamEstimates]; If[Abs[(type1Prob[newParamEstimates]-type1Prob[oldParamEstimates])+(type2Prob[newParamEstimates]-type2Prob[oldParamEstimates])+(Sum[faceProbs1[newParamEstimates][[i]]-faceProbs1[oldParamEstimates][[i]], {i,1,Length[faceProbs1[oldParamEstimates]]}])+(Sum[faceProbs2[newParamEstimates][[j]]-faceProbs2[oldParamEstimates][[j]], {j,1,Length[faceProbs2[oldParamEstimates]]}])]<accuracy, Break[], oldParamEstimates=newParamEstimates], {maxIterations}];*)
 		(*At the end, return the estimated parameters with the less likely die first.*)
 		If[type1Prob[newParamEstimates] <= type2Prob[newParamEstimates],
 		   newParamEstimates,
@@ -69,7 +64,7 @@ diceEMIterator[binCountsList_, numFaces_, initParams_, maxIterations_, accuracy_
 		    faceProbs1[newParamEstimates]}]
 	]
    
-(* updateProbs does the actual EM calculations. Implementing this is your main task. *)
+(* updateProbs does the actual EM calculations. *)
 updateProbs[binCountsList_, oldParamEstimates_, debug_:False] :=
 	Module[{posteriors,
 		    (* type1Count and type2Count are the expected number of times a type1 or type2
@@ -79,31 +74,27 @@ updateProbs[binCountsList_, oldParamEstimates_, debug_:False] :=
 		       of type 1.Likewise for faceCounts2.*) 
 		    faceCounts1, faceCounts2, newFaceProbs1, newFaceProbs2},
 		(*Create list of posterior probabilities of a Type1 die having been rolled on each draw 
-		   by calling your dicePosteriors, which you should paste in to this file. *)
-		(* Put your code here.*)
+		   by calling dicePosteriors. *)
 		posteriors=Table[dicePosterior[binCountsList[[i]], type1Prob[oldParamEstimates], type2Prob[oldParamEstimates], faceProbs1[oldParamEstimates], faceProbs2[oldParamEstimates]],
 			 	   {i,1,Length[binCountsList]}];
 		(* Now use the posteriors to calculate EXPECTED number of times each die type was drawn. *) 
-		(* Put your code here.*)
 		type1Count=Sum[posteriors[[i]], {i, 1, Length[posteriors]}];
 		type2Count=Sum[1-posteriors[[i]], {i, 1, Length[posteriors]}];
 		(* Now use the posteriors to calculate EXPECTED number of times each face was rolled
 		   on each die typep. *) 
-		(* Put your code here.*)
 		
 		faceCounts1=Table[Sum[binCountsList[[i]][[j]]*posteriors[[i]], {i, 1, Length[binCountsList]}], {j, 1, Length[faceProbs1[oldParamEstimates]]}];
 		faceCounts2=Table[Sum[binCountsList[[i]][[j]]*(1-posteriors[[i]]), {i, 1, Length[binCountsList]}], {j, 1, Length[faceProbs2[oldParamEstimates]]}];
 		(* Finally, use these counts to compute maximum likelihood estimates for the parameters and 
 		   return these estimates in a list: {newType1Prob, newType2Prob, newFaceProbs1, newFaceProbs2} *)
-		(* Put your code here.*)
 		newFaceProbs1=Table[faceCounts1[[i]]/Total[faceCounts1], {i, 1, Length[faceCounts1]}];
 		newFaceProbs2=Table[faceCounts2[[i]]/Total[faceCounts2], {i, 1, Length[faceCounts2]}];
 		
 		{type1Count/(type2Count+type1Count), type2Count/(type2Count+type1Count), newFaceProbs1, newFaceProbs2}
 	] 
 
-(* Make sure to include your diceSample and dicePosterior functions here. If yours don't work get working
-   copies from the TAs. *)
+(* diceSample creates a sample of rolls given the probabilities of dice 1, dice 2, the probabilities of their faces,
+	 the rolls per draw and draws. *)
    diceSample[numType1_, numType2_, type1_, type2_, draws_, rollsPerDraw_] :=
  Module[{result=List[]},
  	(*Do draws times the following:*)
@@ -150,7 +141,7 @@ Do[If[faceProbs2[[i]]==0 && binCounts[[i]]==0, result=result, result=result*(fac
 NumOfSides[faceProbs1_]:= Length[faceProbs1]
 
 (*myRound is a hack to get around a problem with rounding numbers in \
-Mathematica. Please don't bother to try to understand it.*)
+Mathematica.*)
 
 myRound[x_, n_] :=
   N[IntegerPart[Round[x,10^-n]*10^n] / 10^n];
